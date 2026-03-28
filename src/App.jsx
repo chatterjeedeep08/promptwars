@@ -1,6 +1,9 @@
-import { useState, useCallback } from 'react';
-import { Key, RefreshCw, Activity, Zap } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Key, RefreshCw, Activity, Zap, LogOut } from 'lucide-react';
 import './index.css';
+
+import GoogleAuth from './components/GoogleAuth';
+import { auth, logout } from './services/firebase';
 
 import ApiKeyPrompt from './components/ApiKeyPrompt';
 import InputPanel from './components/InputPanel';
@@ -17,6 +20,17 @@ const STAGE_IDS = PIPELINE_STAGES.map(s => s.id);
 const STAGE_DELAYS = { input: 100, gemini: 0, intent: 150, context: 150, decision: 150, action: 100, output: 100 };
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState('');
   const [completedStages, setCompletedStages] = useState([]);
@@ -76,7 +90,7 @@ export default function App() {
       await activateStage('output', STAGE_DELAYS.output);
 
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please check your API key and try again.');
+      setError(err.message || 'Something went wrong. Please check your connection and try again.');
       console.error('BridgeAI error:', err);
     } finally {
       setIsProcessing(false);
@@ -92,6 +106,12 @@ export default function App() {
     setCurrentStage('');
     setError('');
   };
+
+  if (authLoading) return null; // Silent load while Firebase checks cache
+
+  if (!user) {
+    return <GoogleAuth onLogin={setUser} />;
+  }
 
   const hasResults = !!geminiOutput;
 
@@ -118,7 +138,24 @@ export default function App() {
                 <RefreshCw size={14} /> New Input
               </button>
             )}
-            {/* The manual API Key change button is removed since the backend secures it */}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 16, borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+              <img 
+                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`} 
+                alt="Profile" 
+                style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)' }} 
+              />
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                {user.displayName?.split(' ')[0]}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm btn-icon"
+                onClick={logout}
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </header>

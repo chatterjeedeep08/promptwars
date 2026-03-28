@@ -60,6 +60,10 @@ export default function InputPanel({ onAnalyze, isProcessing }) {
     { id: 'image', label: 'Image', icon: ImageIcon },
   ];
 
+  // Use a ref to track if user legitimately wanted to record, to prevent auto-stops
+  const isRecordingRef = useRef(false);
+  const [interimText, setInterimText] = useState('');
+
   const startRecording = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -75,19 +79,34 @@ export default function InputPanel({ onAnalyze, isProcessing }) {
       const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
       setTranscript(text);
     };
+
     recognition.onerror = (e) => {
-      console.error('Speech recognition error:', e);
-      stopRecording();
+      console.warn('Speech recognition error:', e.error);
+      if (e.error === 'not-allowed') {
+        alert("Please allow microphone permissions in your browser to use voice input.");
+        stopRecording();
+      }
     };
+
+    recognition.onend = () => {
+      // Browsers often auto-stop recognition after a pause. Restart it if they haven't explicitly clicked stop.
+      if (isRecordingRef.current) {
+        try { recognition.start(); } catch (err) { /* ignore already started */ }
+      }
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
     setIsRecording(true);
+    isRecordingRef.current = true;
     setRecordingTime(0);
     timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
   };
 
   const stopRecording = () => {
+    isRecordingRef.current = false;
     if (recognitionRef.current) {
+      recognitionRef.current.onend = null; // Prevent restart loop
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
@@ -274,15 +293,29 @@ export default function InputPanel({ onAnalyze, isProcessing }) {
               {isRecording ? 'Speaking... click to stop' : 'Click to start recording your input'}
             </p>
 
-            {transcript && (
-              <div style={{
-                background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)', padding: '14px 16px',
-                textAlign: 'left', fontSize: 14, lineHeight: 1.7,
-                color: 'var(--text-primary)', maxHeight: 140, overflowY: 'auto',
-              }}>
-                {transcript}
-              </div>
+            {transcript !== false && (
+              <textarea
+                value={transcript}
+                onChange={e => setTranscript(e.target.value)}
+                placeholder="Transcribed voice will appear here. You can manually edit it before analyzing..."
+                rows={4}
+                style={{
+                  width: '100%', padding: '14px 16px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  resize: 'vertical',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  marginTop: 10,
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
             )}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>

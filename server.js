@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Client } from "@googlemaps/google-maps-services-js";
 import rateLimit from 'express-rate-limit';
 
 // Polyfill for __dirname in ES modules
@@ -127,6 +128,83 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
   } catch (error) {
     console.error("Backend Proxy Error:", error.message);
     return res.status(500).json({ error: error.message || "Failed to contact proxy." });
+  }
+});
+
+const mapsClient = new Client({});
+const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+if (!MAPS_KEY) {
+  console.warn("WARNING: Backend proxy started without GOOGLE_MAPS_API_KEY. Map routing will fail!");
+}
+
+// ============================================
+// API ENDPOINT: /api/maps/geocode
+// ============================================
+app.get('/api/maps/geocode', async (req, res) => {
+  const { lat, lng } = req.query;
+  if (!lat || !lng) return res.status(400).json({ error: "Missing lat/lng" });
+
+  try {
+    const response = await mapsClient.reverseGeocode({
+      params: { latlng: `${lat},${lng}`, key: MAPS_KEY }
+    });
+    return res.json({ address: response.data.results[0]?.formatted_address || "Unknown Location" });
+  } catch (error) {
+    console.error("Geocoding Error:", error.response?.data?.error_message || error.message);
+    return res.status(500).json({ error: "Geocoding failed" });
+  }
+});
+
+// ============================================
+// API ENDPOINT: /api/maps/places
+// ============================================
+app.get('/api/maps/places', async (req, res) => {
+  const { lat, lng, keyword, radius = 15000 } = req.query;
+  if (!lat || !lng || !keyword) return res.status(400).json({ error: "Missing parameters" });
+
+  try {
+    const response = await mapsClient.placesNearby({
+      params: { location: `${lat},${lng}`, radius, keyword, key: MAPS_KEY }
+    });
+    
+    // Sort by business status to prioritize operational centers
+    const operational = response.data.results.filter(p => p.business_status === "OPERATIONAL" || !p.business_status);
+    return res.json({ results: operational.slice(0, 5) }); // return top 5
+  } catch (error) {
+    console.error("Places API Error:", error.response?.data?.error_message || error.message);
+    return res.status(500).json({ error: "Places search failed" });
+  }
+});
+
+// ============================================
+// API ENDPOINT: /api/maps/directions
+// ============================================
+app.get('/api/maps/directions', async (req, res) => {
+  const { originLat, originLng, destLat, destLng } = req.query;
+  if (!originLat || !destLat) return res.status(400).json({ error: "Missing parameters" });
+
+  try {
+    const response = await mapsClient.directions({
+      params: {
+        origin: `${originLat},${originLng}`,
+        destination: `${destLat},${destLng}`,
+        mode: "driving",
+        key: MAPS_KEY
+      }
+    });
+    
+    const route = response.data.routes[0]?.legs[0];
+    if (!route) return res.json({ distance: null, duration: null });
+
+    return res.json({
+      distance: route.distance.text, // e.g., "5.4 mi"
+      duration: route.duration.text, // e.g., "12 mins"
+      durationValue: route.duration.value // in seconds
+    });
+  } catch (error) {
+    console.error("Directions API Error:", error.response?.data?.error_message || error.message);
+    return res.status(500).json({ error: "Directions request failed" });
   }
 });
 
