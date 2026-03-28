@@ -14,10 +14,9 @@ import { getContext } from './services/contextService';
 import { runDecisionEngine } from './services/decisionEngine';
 
 const STAGE_IDS = PIPELINE_STAGES.map(s => s.id);
-const STAGE_DELAYS = { input: 600, gemini: 0, intent: 500, context: 700, decision: 600, action: 500, output: 400 };
+const STAGE_DELAYS = { input: 100, gemini: 0, intent: 150, context: 150, decision: 150, action: 100, output: 100 };
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('bridge_ai_key') || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState('');
   const [completedStages, setCompletedStages] = useState([]);
@@ -50,9 +49,9 @@ export default function App() {
       // Stage 1: Input Processing
       await activateStage('input', STAGE_DELAYS.input);
 
-      // Stage 2: Gemini AI — real API call
+      // Stage 2: Gemini AI — secure backend proxy
       setCurrentStage('gemini');
-      const geminiResult = await analyzeInput(text, apiKey, type, imageBase64, mimeType);
+      const geminiResult = await analyzeInput(text, null, type, imageBase64, mimeType);
       setCompletedStages(prev => [...prev, 'gemini']);
       setCurrentStage('');
 
@@ -94,10 +93,6 @@ export default function App() {
     setError('');
   };
 
-  if (!apiKey) {
-    return <ApiKeyPrompt onSave={setApiKey} />;
-  }
-
   const hasResults = !!geminiOutput;
 
   return (
@@ -108,13 +103,13 @@ export default function App() {
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
 
-      {/* Header */}
+        {/* Header */}
       <header className="app-header">
         <div className="header-inner">
           <div className="logo">
             <div className="logo-icon">🌉</div>
             <span className="logo-text">BridgeAI</span>
-            <span className="logo-badge">Gemini-Powered</span>
+            <span className="logo-badge">Secure Proxy</span>
           </div>
 
           <div className="header-actions">
@@ -123,16 +118,7 @@ export default function App() {
                 <RefreshCw size={14} /> New Input
               </button>
             )}
-            <button
-              className="btn btn-ghost btn-sm btn-icon"
-              onClick={() => {
-                localStorage.removeItem('bridge_ai_key');
-                setApiKey('');
-              }}
-              title="Change API Key"
-            >
-              <Key size={14} />
-            </button>
+            {/* The manual API Key change button is removed since the backend secures it */}
           </div>
         </div>
       </header>

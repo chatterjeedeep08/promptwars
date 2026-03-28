@@ -105,6 +105,7 @@ export default function ActionOrchestrator({ actions, urgency }) {
               {!isExecuted && (
                 <button
                   className="btn btn-sm"
+                  aria-label={needsConfirm ? `Confirm action: ${action.label}` : `Execute action: ${action.label}`}
                   onClick={() => handleActionClick(action)}
                   style={{
                     flexShrink: 0,
@@ -128,10 +129,10 @@ export default function ActionOrchestrator({ actions, urgency }) {
           background: 'rgba(8,11,20,0.8)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 24,
-        }}>
+        }} role="dialog" aria-modal="true" aria-labelledby="modal-title">
           <div className="glass-card animate-fade-in-up" style={{ padding: '32px', maxWidth: 440, width: '100%' }}>
             <div style={{ fontSize: 36, marginBottom: 16, textAlign: 'center' }}>{pendingConfirm.icon}</div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+            <h3 id="modal-title" style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
               {pendingConfirm.label}
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14, textAlign: 'center', lineHeight: 1.6, marginBottom: 8 }}>
@@ -147,11 +148,11 @@ export default function ActionOrchestrator({ actions, urgency }) {
               </span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }}
+              <button className="btn btn-ghost" aria-label="Cancel confirmation" style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => setPendingConfirm(null)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}
+              <button className="btn btn-primary" aria-label={`Confirm and execute ${pendingConfirm.label}`} style={{ flex: 1, justifyContent: 'center' }}
                 onClick={confirmAction}>
                 <CheckCircle2 size={14} /> Confirm & Execute
               </button>
