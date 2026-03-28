@@ -62,7 +62,7 @@ export default function App() {
 
       // Stage 4: Context Enrichment
       await activateStage('context', STAGE_DELAYS.context);
-      const ctx = getContext(geminiResult.intent);
+      const ctx = await getContext(geminiResult.intent);
       setContextData(ctx);
 
       // Stage 5: Decision Engine
@@ -151,7 +151,7 @@ export default function App() {
               fontSize: 12, fontWeight: 600, color: 'var(--accent-primary)',
               marginBottom: 24, letterSpacing: '0.3px',
             }}>
-              <Activity size={12} /> Powered by Gemini 1.5 Flash
+              <Activity size={12} /> Powered by Gemini 2.5 Flash
             </div>
             <h1 style={{
               fontSize: 'clamp(32px, 5vw, 56px)',

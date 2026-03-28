@@ -13,7 +13,15 @@ export default function ContextPanel({ contextData, urgency }) {
 
   return (
     <div className="glass-card animate-fade-in-up" style={{ padding: '24px' }}>
-      <div className="section-label">Context Enrichment</div>
+      <div className="section-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>Context Enrichment</span>
+        {contextData.user_location && (
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <MapPin size={12} color="var(--accent-primary)" />
+            {contextData.user_location}
+          </span>
+        )}
+      </div>
 
       {/* Primary Service */}
       <div style={{

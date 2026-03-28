@@ -38,7 +38,7 @@ Output: {"intent":"disaster_response","urgency":"critical","confidence":0.95,"en
 
 export async function analyzeInput(userInput, apiKey, inputType = 'text', imageBase64 = null, mimeType = null) {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `${SYSTEM_PROMPT}\n\nFew-shot examples for calibration:\n${FEW_SHOT_EXAMPLES}\n\nNow analyze this ${inputType} input and respond with ONLY the JSON object:\n\n"${userInput}"`;
 
